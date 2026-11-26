@@ -254,7 +254,7 @@
         <div class="cover-grip"><span>▌▌▌</span><em>drag to uncover →</em></div>
       </div>
     </div>
-    <div class="legend" id="legend"><i style="background:#c8881f"></i>50-day<i style="background:#8a8273"></i>200-day<i style="background:#2f5d8a"></i>RS line (vs S&amp;P 500)<i style="background:#c8881f;height:6px;width:6px;border-radius:3px"></i>new 52-week high</div>
+    <div class="legend" id="legend"><i style="background:#c8881f"></i>50-day<i style="background:#8a8273"></i>200-day<i style="background:#2f5d8a"></i>RS line (vs S&amp;P 500)<i style="background:rgba(200,136,31,.55);height:5px;width:5px;border-radius:3px"></i>new 52-week high</div>
     <div class="epscard" id="epsCard"></div>
   </div>
 
@@ -415,7 +415,7 @@ function sliceSeries(arr,vis){
 let markers=[];                                   // buy/sell/breakout markers
 function paintMarkers(vis){
   let m=markers.slice();
-  if(pro && P && P.hi52) P.hi52.forEach((h,i)=>{ if(h && i<vis) m.push({time:TS[i],position:'aboveBar',color:'#c8881f',shape:'circle',size:0.4}); });
+  if(pro && P && P.hi52) P.hi52.forEach((h,i)=>{ if(h && i<vis) m.push({time:TS[i],position:'aboveBar',color:'rgba(200,136,31,.55)',shape:'circle',size:0.15}); });
   m.sort((a,b)=>a.time-b.time);
   candle.setMarkers(m);
 }
@@ -616,7 +616,7 @@ function finish(){
   document.getElementById('cosym').textContent=C.ticker;
   chart.applyOptions({rightPriceScale:{visible:true},crosshair:{horzLine:{labelVisible:true}}});
   candle.createPriceLine({price:C.pivot,color:'#c8881f',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'base high'});
-  markers.push({time:TS[C.breakoutIdx],position:'belowBar',color:'#c8881f',shape:'circle',text:'breakout'});
+  markers.push({time:TS[C.breakoutIdx],position:'belowBar',color:'#11161c',shape:'arrowUp',text:'breakout'});
   render();
   if(!MODE.practice) recordStreak(youRet>0 || (bought===null && failedish));
   document.getElementById('result').classList.add('show');
