@@ -218,6 +218,9 @@
   .brief .bj{margin-top:10px;color:#cfc7b4;font-size:11px}
   .brief em{display:block;margin-top:10px;font-style:normal;color:var(--accent);letter-spacing:.16em;text-transform:uppercase;font-size:10px}
   @media(max-width:520px){ .stat .v{font-size:18px} .brief{padding:10px 12px;font-size:11px} .brief .br{grid-template-columns:62px 1fr} }
+  .recap{display:block;margin-top:12px;padding:10px 12px;border:1px dashed var(--accent);color:var(--ink);
+    font-size:11px;letter-spacing:.04em;line-height:1.5;text-decoration:none;text-align:center}
+  .recap:hover{background:#f6f1e6}
   .practicebar a.cur{font-weight:700;text-decoration:none;border-bottom:2px solid var(--accent)}
 </style>
 </head>
@@ -314,6 +317,7 @@
         <button class="share" id="shareBtn">Copy result</button>
         <button class="share alt" id="shareImgBtn">Share image</button>
       </div>
+      <a class="recap" href="https://www.aroundthetabletop.com/breakout" target="_blank">Get the monthly BREAKOUT recap: the month's best and trickiest charts, and what they taught →</a>
       <div class="next" id="nextLine">Next chart unlocks at midnight · <a href="?practice=all">Practice with past charts</a></div>
     </div>
   </div>
@@ -329,7 +333,10 @@ const TODAY = localISO(new Date());
 const [ly,lm,ld] = LAUNCH.split('-').map(Number);
 const now = new Date();
 const BREAKOUT_DAY = 1 + Math.round((Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()) - Date.UTC(ly,lm-1,ld))/86400000);
-const PRACTICE = new URLSearchParams(location.search).get('practice');
+const QS = new URLSearchParams(location.search);
+const PRACTICE = QS.get('practice');
+let REPLAY = QS.get('day');                         // replay a past daily chart, never a future one
+if(REPLAY && (!/^\d{4}-\d{2}-\d{2}$/.test(REPLAY) || REPLAY >= TODAY || REPLAY < LAUNCH)) REPLAY = null;
 const KIND_LABEL = {all:'Any', breakouts:'Breakouts', traps:'Traps', held:'Breakouts', failed:'Breakouts', 'no-trade':'Traps', shakeout:'Traps'};
 
 function noChart(msg){
@@ -349,14 +356,14 @@ if(PRACTICE){
     return fetch('practice/'+pick.id+'.json').then(r=>r.json()).then(c=>startGame(c,{practice:true}));
   }).catch(()=>noChart('Practice charts could not be loaded. Try again in a moment.'));
 } else {
-  fetch('charts/'+TODAY+'.json',{cache:'no-cache'})
+  fetch('charts/'+(REPLAY||TODAY)+'.json',{cache:'no-cache'})
     .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
-    .then(c=>startGame(c,{}))
+    .then(c=>startGame(c, REPLAY ? {replay:REPLAY} : {}))
     .catch(()=>noChart('No chart is posted for today yet. Check back soon.'));
 }
 
 function startGame(CHART, MODE){
-const DAY = BREAKOUT_DAY;
+const DAY = MODE.replay ? 1 + Math.round((Date.UTC(...MODE.replay.split('-').map((v,i)=>i===1?v-1:+v)) - Date.UTC(ly,lm-1,ld))/86400000) : BREAKOUT_DAY;
 const C = CHART;
 const N = C.bars.length;
 const P = C.pro || null;                         // optional pro-mode data
@@ -627,7 +634,7 @@ function finish(){
   if(bought===null) cl.innerHTML='You kept your <b>$10,000</b> in cash. Holding the whole chart would have '+(holdRet>=0?'made ':'lost ')+'<b>'+money(Math.abs(STAKE*holdRet))+'</b>.';
   else { const shares=Math.floor(STAKE/bought), out=STAKE*(1+youRet);
     cl.innerHTML='You put <b>$10,000</b> in: '+shares.toLocaleString('en-US')+' shares at $'+bought.toFixed(2)+'. You took out <b>'+money(out)+'</b>, '+(youRet>=0?'a gain of ':'a loss of ')+'<b>'+money(Math.abs(STAKE*youRet))+'</b>.'; }
-  if(!MODE.practice) cl.innerHTML += '<br><span id="acctLine"></span>';
+  if(!MODE.practice && !MODE.replay) cl.innerHTML += '<br><span id="acctLine"></span>';
   lastResult={ret:bought===null?0:youRet, good:G.points>=6, letter:G.letter};
   const a=C.about||{};
   document.getElementById('aboutTitle').textContent='About '+C.name+' ('+C.ticker+')';
@@ -642,7 +649,7 @@ function finish(){
   candle.createPriceLine({price:C.pivot,color:'#c8881f',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'base high'});
   markers.push({time:TS[C.breakoutIdx],position:'belowBar',color:'#11161c',shape:'arrowUp',text:'breakout'});
   render();
-  if(!MODE.practice){ recordStreak(lastResult.good, lastResult.ret); paintAccount(); }
+  if(!MODE.practice && !MODE.replay){ recordStreak(lastResult.good, lastResult.ret); paintAccount(); }
   document.getElementById('result').classList.add('show');
   document.getElementById('result').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
@@ -683,7 +690,7 @@ function paintStreak(){
 }
 
 // ---- share ----
-function shareLabel(){ return MODE.practice ? 'BREAKOUT practice' : 'BREAKOUT, Chart No. '+DAY; }
+function shareLabel(){ return MODE.practice ? 'BREAKOUT practice' : 'BREAKOUT, Chart No. '+DAY+(MODE.replay?' (replay)':''); }
 document.getElementById('shareBtn').addEventListener('click',()=>{
   const v=document.getElementById('verdict').textContent, y=sgn(lastResult?lastResult.ret:0);
   const txt=shareLabel()+'\n'+v+'  ·  '+y+'\nbreakout.aroundthetabletop.com';
@@ -736,6 +743,11 @@ if(MODE.practice){
   document.getElementById('puzzleid').textContent='Practice · '+(KIND_LABEL[PRACTICE]||'Any');
   document.getElementById('streakwrap').style.display='none';
   document.getElementById('nextLine').innerHTML='<a href="?practice='+encodeURIComponent(PRACTICE)+'">Another practice chart →</a> · <a href="./">Today\'s chart</a>';
+} else if(MODE.replay){
+  document.getElementById('sessionlbl').textContent='Replay';
+  document.getElementById('puzzleid').textContent='Chart No. '+DAY+' · replay';
+  document.getElementById('streakwrap').style.display='none';
+  document.getElementById('nextLine').innerHTML='<a href="./">Play today\'s chart →</a> · <a href="?practice=all">Practice</a>';
 } else {
   document.getElementById('puzzleid').textContent='Chart No. '+DAY;
   paintStreak();
