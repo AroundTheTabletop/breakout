@@ -158,6 +158,35 @@
   .help{font-size:11px;color:var(--muted);line-height:1.6;margin:10px 0 0;letter-spacing:.04em}
   @media(max-width:520px){h1{font-size:27px;letter-spacing:.1em}#chart{height:280px}}
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+  /* ---- v2: pro mode, coach, practice, stop, share ---- */
+  .subbar .right{display:flex;gap:12px;align-items:center}
+  button.pro{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    background:transparent;border:1px solid var(--rule);color:var(--muted);padding:4px 8px;cursor:pointer}
+  button.pro.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .prostrip{display:none;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:7px 12px;
+    border-bottom:1px solid var(--rule);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .prostrip.show{display:flex}
+  .prostrip b{color:var(--ink)} .prostrip .up{color:var(--buy)} .prostrip .dn{color:var(--sell)} .prostrip .mid{color:var(--accent)}
+  .legend{display:none;padding:6px 12px;border-top:1px solid var(--rule);font-size:10px;letter-spacing:.08em;color:var(--muted)}
+  .legend.show{display:block}
+  .legend i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin:0 4px 0 10px}
+  .epscard{display:none;padding:8px 12px;border-top:1px solid var(--rule);font-size:11px;line-height:1.5;color:var(--ink)}
+  .epscard.show{display:block}
+  .epscard .k{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-right:6px}
+  .stopopt{display:block;margin-top:10px;font-size:11px;color:var(--muted);letter-spacing:.04em;cursor:pointer}
+  .stopopt input{vertical-align:middle;margin-right:6px}
+  .coach{border:1px solid var(--rule);background:#f6f1e6;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.6}
+  .coach ul{margin:8px 0 0;padding-left:18px} .coach li{margin:4px 0}
+  .coach .rule{color:var(--ink)}
+  .sharerow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+  .sharerow .share{margin-top:0}
+  .share.alt{background:var(--paper);color:var(--ink)}
+  .next a,.practicebar a{color:var(--ink)}
+  .practicebar{display:none;border:1px solid var(--rule);background:#fbf8f1;padding:8px 12px;margin-bottom:12px;
+    font-size:11px;letter-spacing:.08em;line-height:1.9}
+  .practicebar a{margin-right:10px;cursor:pointer}
+  .practicebar a.cur{font-weight:700;text-decoration:none;border-bottom:2px solid var(--accent)}
 </style>
 </head>
 <body>
@@ -165,7 +194,7 @@
 
   <header class="mast">
     <div class="row">
-      <span class="ticker-tape">Daily Session</span>
+      <span class="ticker-tape" id="sessionlbl">Daily Session</span>
       <span class="ticker-tape" id="dateline"></span>
     </div>
     <h1>BREAKOUT<span class="dot">.</span></h1>
@@ -174,13 +203,27 @@
 
   <div class="subbar">
     <span id="puzzleid">Chart No. —</span>
-    <span class="streak">Streak <b id="streak">0</b> · Played <b id="played">0</b></span>
+    <span class="right">
+      <span class="streak" id="streakwrap">Streak <b id="streak">0</b> · Played <b id="played">0</b></span>
+      <button class="pro" id="proBtn" title="Moving averages, relative strength, market direction and earnings">Pro: off</button>
+    </span>
+  </div>
+
+  <div class="practicebar" id="practiceBar">
+    Practice with past charts:
+    <a data-k="all">Any</a><a data-k="held">Winners</a><a data-k="failed">Failures</a><a data-k="no-trade">No-trades</a><a data-k="shakeout">Shakeouts</a>
+    <br><a href="./">← Back to today's chart</a>
   </div>
 
   <div class="card">
     <div class="card-hd">
       <span class="co" id="coname">—<span class="sym" id="cosym"></span></span>
       <span class="live">Price <b id="lastpx">—</b></span>
+    </div>
+    <div class="prostrip" id="proStrip">
+      <span>Market <b id="mkt">—</b></span>
+      <span>RS line <b id="rsNote">—</b></span>
+      <span id="hiNote"></span>
     </div>
     <div class="stage">
       <div id="chart"></div>
@@ -189,6 +232,8 @@
         <div class="cover-grip"><span>▌▌▌</span><em>drag to uncover →</em></div>
       </div>
     </div>
+    <div class="legend" id="legend"><i style="background:#c8881f"></i>50-day<i style="background:#8a8273"></i>200-day<i style="background:#2f5d8a"></i>RS line (vs S&amp;P 500)<i style="background:#c8881f;height:6px;width:6px;border-radius:3px"></i>new 52-week high</div>
+    <div class="epscard" id="epsCard"></div>
   </div>
 
   <div class="reveal">
@@ -201,6 +246,7 @@
     <button class="act buy" id="buyBtn" disabled>▲ Buy</button>
     <button class="act sell" id="sellBtn" disabled>▼ Sell</button>
   </div>
+  <label class="stopopt"><input type="checkbox" id="stopChk">Auto-sell if a day closes 8% below my buy (the classic stop)</label>
 
   <div class="ticket" id="ticket" style="display:none">
     <div class="g">Bought <b id="tBuy">—</b></div>
@@ -219,6 +265,11 @@
         <div class="stat"><div class="k">Perfect return</div><div class="v" id="rPerfect">—</div></div>
       </div>
       <div class="capture"><span id="captureLine"></span></div>
+      <div class="coach" id="coach">
+        <div class="about-hd">How a rules trader played it</div>
+        <div class="rule" id="coachRule"></div>
+        <ul id="coachNotes"></ul>
+      </div>
       <div class="about">
         <div class="about-hd" id="aboutTitle">About this chart</div>
         <div class="about-row"><span class="al">The company</span><span class="av" id="aWhat"></span></div>
@@ -226,47 +277,60 @@
         <div class="about-row"><span class="al">What happened</span><span class="av" id="aOutcome"></span></div>
         <div class="about-row"><span class="al">Takeaway</span><span class="av" id="aLesson"></span></div>
       </div>
-      <button class="share" id="shareBtn">Copy result</button>
-      <div class="next">Next chart unlocks at midnight</div>
+      <div class="sharerow">
+        <button class="share" id="shareBtn">Copy result</button>
+        <button class="share alt" id="shareImgBtn">Share image</button>
+      </div>
+      <div class="next" id="nextLine">Next chart unlocks at midnight · <a href="?practice=all">Practice with past charts</a></div>
     </div>
   </div>
 
-  <div class="ad" id="adslot">
-    Ad space · 728×90 leaderboard<br>your sponsor here once the site is live
-  </div>
-
   <div class="foot">
-    BREAKOUT is a daily chart-reading game: read the base, time the move, one buy and one sell. Every chart is a real historical stock. The name, dates and price level stay hidden until you sell. Nothing here is investment advice.
+    BREAKOUT is a daily chart-reading game: read the base, time the move, one buy and one sell. Every chart is a real historical stock. The name, dates and price level stay hidden until you sell. The rules-trader comparison uses common O'Neil-style rules: buy within 5% of the breakout level, cut at 8% down, take profits at 20% up. Nothing here is investment advice.
   </div>
 <script>
-// ---- daily loader: each day's chart is its own small file in charts/ ----
+// ---- loader: today's daily chart, or a practice chart (?practice=kind) ----
 const LAUNCH = "2026-11-26";                     // chart No. 1 plays this day
 function localISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 const TODAY = localISO(new Date());
 const [ly,lm,ld] = LAUNCH.split('-').map(Number);
 const now = new Date();
 const BREAKOUT_DAY = 1 + Math.round((Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()) - Date.UTC(ly,lm-1,ld))/86400000);
-fetch('charts/'+TODAY+'.json',{cache:'no-cache'})
-  .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
-  .then(startGame)
-  .catch(()=>{ document.getElementById('help').innerHTML='<b>No chart is posted for today yet.</b> Check back soon.';
-               document.getElementById('cover').querySelector('em').textContent='no chart today'; });
-function startGame(CHART){
+const PRACTICE = new URLSearchParams(location.search).get('practice');
+const KIND_LABEL = {all:'Any', held:'Winners', failed:'Failures', 'no-trade':'No-trades', shakeout:'Shakeouts'};
 
-// ---- pick today's chart deterministically from the date ----
+function noChart(msg){
+  document.getElementById('help').innerHTML='<b>'+msg+'</b>';
+  document.getElementById('cover').querySelector('em').textContent='no chart';
+}
+if(PRACTICE){
+  const bar=document.getElementById('practiceBar'); bar.style.display='block';
+  bar.querySelectorAll('a[data-k]').forEach(a=>{
+    a.href='?practice='+a.dataset.k; if(a.dataset.k===PRACTICE) a.classList.add('cur');
+  });
+  fetch('practice/index.json',{cache:'no-cache'}).then(r=>r.json()).then(list=>{
+    const pool=list.filter(x=> PRACTICE==='all' || x.k===PRACTICE ||
+      (PRACTICE==='held' && /held$/.test(x.k)) || (PRACTICE==='failed' && /failed$/.test(x.k)));
+    if(!pool.length) throw new Error('empty');
+    const pick=pool[Math.floor(Math.random()*pool.length)];
+    return fetch('practice/'+pick.id+'.json').then(r=>r.json()).then(c=>startGame(c,{practice:true}));
+  }).catch(()=>noChart('Practice charts could not be loaded. Try again in a moment.'));
+} else {
+  fetch('charts/'+TODAY+'.json',{cache:'no-cache'})
+    .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(c=>startGame(c,{}))
+    .catch(()=>noChart('No chart is posted for today yet. Check back soon.'));
+}
+
+function startGame(CHART, MODE){
 const DAY = BREAKOUT_DAY;
 const C = CHART;
 const N = C.bars.length;
+const P = C.pro || null;                         // optional pro-mode data
 
-// build series data with synthetic dates
 function mkDates(n){
-  const out=[]; let d=new Date(Date.UTC(2024,0,2));
-  let added=0;
-  while(added<n){
-    const wd=d.getUTCDay();
-    if(wd!==0&&wd!==6){ out.push(d.getTime()/1000); added++; }
-    d=new Date(d.getTime()+86400000);
-  }
+  const out=[]; let d=new Date(Date.UTC(2024,0,2)); let added=0;
+  while(added<n){ const wd=d.getUTCDay(); if(wd!==0&&wd!==6){ out.push(d.getTime()/1000); added++; } d=new Date(d.getTime()+86400000); }
   return out;
 }
 const TS = mkDates(N);
@@ -288,46 +352,83 @@ const opts={
 const chart=LightweightCharts.createChart(chartEl,{...opts,height:340});
 const candle=chart.addCandlestickSeries({
   upColor:'#1f6f54',downColor:'#a8322d',borderUpColor:'#1f6f54',borderDownColor:'#a8322d',
-  wickUpColor:'#1f6f54',wickDownColor:'#a8322d',
-  priceLineVisible:false,lastValueVisible:false
-});
-const volChart=LightweightCharts.createChart(volEl,{...opts,height:70,
-  rightPriceScale:{borderColor:'#cfc7b4',visible:false}});
-const volSeries=volChart.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'',
-  priceLineVisible:false,lastValueVisible:false});
+  wickUpColor:'#1f6f54',wickDownColor:'#a8322d',priceLineVisible:false,lastValueVisible:false});
+const volChart=LightweightCharts.createChart(volEl,{...opts,height:70,rightPriceScale:{borderColor:'#cfc7b4',visible:false}});
+const volSeries=volChart.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'',priceLineVisible:false,lastValueVisible:false});
 volSeries.priceScale().applyOptions({scaleMargins:{top:.2,bottom:0}});
-
-// sync time scales
 chart.timeScale().subscribeVisibleLogicalRangeChange(r=>{ if(r) volChart.timeScale().setVisibleLogicalRange(r); });
 volChart.timeScale().subscribeVisibleLogicalRangeChange(r=>{ if(r) chart.timeScale().setVisibleLogicalRange(r); });
 
-// pivot line
-// No pivot line: the player finds the level themselves.
+// pro-mode overlays (lines never change the price scale, so they can't hint at the level)
+const lineOpts={lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,autoscaleInfoProvider:()=>null};
+const ma50S=chart.addLineSeries({...lineOpts,color:'#c8881f'});
+const ma200S=chart.addLineSeries({...lineOpts,color:'#8a8273'});
+const rsS=chart.addLineSeries({...lineOpts,color:'#2f5d8a',priceScaleId:'rs',autoscaleInfoProvider:undefined});
+chart.priceScale('rs').applyOptions({scaleMargins:{top:.03,bottom:.72},visible:false});
+const vol50S=volChart.addLineSeries({...lineOpts,color:'#c8881f',priceScaleId:''});
 
-// ---- reveal state ----
-// Chart starts COMPLETELY covered. Sliding uncovers left to right from the first bar.
-const SEED = 3;            // minimum bars rendered so the axis exists (kept under the cover)
-const START = 0;           // reveal logically starts at the beginning
+// ---- state ----
+const SEED = 3;
 let revealed = SEED;
-let bought=null, sold=null, locked=false, boughtIdx=null, soldIdx=null, finished=false;
+let bought=null, sold=null, locked=false, boughtIdx=null, soldIdx=null, finished=false, stoppedOut=false;
+function store(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function load(k){try{return localStorage.getItem(k)}catch(e){return null}}
+let pro = load('breakout_pro')==='1';
 
 const slider=document.getElementById('slider');
 slider.min=0; slider.max=100; slider.value=0;
-const span = N - SEED;                       // revealable candles
+const span = N - SEED;
 function pctToReveal(p){ return SEED + Math.round(p/100*span); }
 function revealToPct(r){ return Math.round((r-SEED)/span*100); }
 const cover=document.getElementById('cover');
+const stopChk=document.getElementById('stopChk');
+stopChk.checked = load('breakout_stop')==='1';
+stopChk.addEventListener('change',()=>store('breakout_stop',stopChk.checked?'1':'0'));
 
-function positionCover(vis,pctNow){
-  // Binary cover: fully hides the chart until the player starts sliding, then gets out of the way.
-  if(pctNow<=0){ cover.classList.remove('gone'); }
-  else { cover.classList.add('gone'); }
+function sliceSeries(arr,vis){
+  if(!arr) return [];
+  return arr.slice(0,vis).map((v,i)=> v==null ? {time:TS[i]} : {time:TS[i],value:v});
 }
+let markers=[];                                   // buy/sell/breakout markers
+function paintMarkers(vis){
+  let m=markers.slice();
+  if(pro && P && P.hi52) P.hi52.forEach((h,i)=>{ if(h && i<vis) m.push({time:TS[i],position:'aboveBar',color:'#c8881f',shape:'circle',size:0.4}); });
+  m.sort((a,b)=>a.time-b.time);
+  candle.setMarkers(m);
+}
+const MKT=['Correction','Under pressure','Uptrend'], MKTC=['dn','mid','up'];
+function paintPro(vis){
+  const on = pro && !!P;
+  document.getElementById('proStrip').classList.toggle('show',on);
+  document.getElementById('legend').classList.toggle('show',on);
+  document.getElementById('epsCard').classList.toggle('show',on);
+  ma50S.setData(on?sliceSeries(P.ma50,vis):[]); ma200S.setData(on?sliceSeries(P.ma200,vis):[]);
+  rsS.setData(on?sliceSeries(P.rs,vis):[]); vol50S.setData(on?sliceSeries(P.vol50,vis):[]);
+  if(!on) return;
+  const k=vis-1, mk=document.getElementById('mkt');
+  if(P.mkt && P.mkt[k]!=null){ mk.textContent=MKT[P.mkt[k]]; mk.className=MKTC[P.mkt[k]]; } else { mk.textContent='n/a'; mk.className=''; }
+  const rn=document.getElementById('rsNote');
+  if(P.rsHi && P.rsHi[k]!=null){ rn.textContent=P.rsHi[k]?'at a new high':'below its high'; rn.className=P.rsHi[k]?'up':''; } else rn.textContent='n/a';
+  document.getElementById('hiNote').innerHTML = (P.hi52 && P.hi52[k]) ? '<b class="up">New 52-week high</b>' : '';
+  const ec=document.getElementById('epsCard');
+  if(!P.eps){ ec.innerHTML='<span class="k">Earnings</span>Not available for this chart.'; }
+  else {
+    let snap=null; for(const e of P.eps){ if(e.i<=k) snap=e; }
+    if(!snap) ec.innerHTML='<span class="k">Earnings</span>No reports on file yet.';
+    else ec.innerHTML='<span class="k">C · latest quarter EPS vs a year ago</span><b>'+(snap.q||'n/a')+'</b><br>'
+      +'<span class="k">A · annual EPS growth, last years</span><b>'+(snap.a||'n/a')+'</b>'
+      +(snap.i>0?' <span class="k" style="margin-left:6px">updated day '+(snap.i+1)+'</span>':'');
+  }
+}
+const proBtn=document.getElementById('proBtn');
+function paintProBtn(){ proBtn.textContent = P ? ('Pro: '+(pro?'on':'off')) : 'Pro: n/a'; proBtn.classList.toggle('on',pro&&!!P); proBtn.disabled=!P; }
+proBtn.addEventListener('click',()=>{ pro=!pro; store('breakout_pro',pro?'1':'0'); paintProBtn(); render(); });
 
 function render(){
   const vis = Math.min(revealed, N);
   candle.setData(candleAll.slice(0,vis));
   volSeries.setData(volAll.slice(0,vis));
+  paintPro(vis); paintMarkers(vis);
   chart.timeScale().fitContent(); volChart.timeScale().fitContent();
   const last = C.bars[vis-1][3];
   const pctNow = Math.round((vis-SEED)/span*100);
@@ -335,22 +436,16 @@ function render(){
   document.getElementById('lastpx').textContent = pctNow<=0 ? '—'
     : finished ? '$'+last.toFixed(2) : (fromStart>=0?'+':'')+fromStart.toFixed(1)+'% from start';
   document.getElementById('revealpct').textContent = pctNow+'% uncovered';
-  positionCover(vis,pctNow);
+  if(pctNow<=0) cover.classList.remove('gone'); else cover.classList.add('gone');
   updateTicket();
 }
 
-function execPrice(){
-  // Fill at the close of the last UNCOVERED candle — the price the player is actually looking at.
-  const vis = Math.min(revealed, N);
-  return C.bars[vis-1][3];
-}
-function execIndex(){
-  return Math.min(revealed, N) - 1;
-}
+function execIndex(){ return Math.min(revealed, N) - 1; }
+function execPrice(){ return C.bars[execIndex()][3]; }
 
 function updateButtons(){
   const pctNow = Math.round((Math.min(revealed,N)-SEED)/span*100);
-  const playable = pctNow >= 15;   // must uncover into live territory before trading
+  const playable = pctNow >= 15;
   document.getElementById('buyBtn').disabled  = locked || bought!==null || revealed>=N || !playable;
   document.getElementById('sellBtn').disabled = locked || bought===null || sold!==null || revealed>=N;
 }
@@ -359,25 +454,22 @@ function updateTicket(){
   if(bought===null){ t.style.display='none'; return; }
   t.style.display='flex';
   document.getElementById('tBuy').textContent= finished ? '$'+bought.toFixed(2) : 'Day '+(boughtIdx+1);
-  if(sold!==null){
-    document.getElementById('tSell').textContent= finished ? '$'+sold.toFixed(2) : 'Day '+(soldIdx+1);
-    const pl=((sold-bought)/bought*100);
-    const el=document.getElementById('tPL');
-    el.textContent=(pl>=0?'+':'')+pl.toFixed(1)+'%';
-    el.style.color = pl>=0?'var(--buy)':'var(--sell)';
-  }else{
-    const px = C.bars[Math.min(revealed,N)-1][3];
-    const pl=((px-bought)/bought*100);
-    const el=document.getElementById('tPL');
-    el.textContent=(pl>=0?'+':'')+pl.toFixed(1)+'%';
-    el.style.color = pl>=0?'var(--buy)':'var(--sell)';
-  }
+  const px = sold!==null ? sold : C.bars[Math.min(revealed,N)-1][3];
+  if(sold!==null) document.getElementById('tSell').textContent= finished ? '$'+sold.toFixed(2) : 'Day '+(soldIdx+1);
+  const pl=((px-bought)/bought*100), el=document.getElementById('tPL');
+  el.textContent=(pl>=0?'+':'')+pl.toFixed(1)+'%';
+  el.style.color = pl>=0?'var(--buy)':'var(--sell)';
 }
 
 slider.addEventListener('input',()=>{
-  const p=parseInt(slider.value,10);
-  const v=pctToReveal(p);
+  const v=pctToReveal(parseInt(slider.value,10));
   if(v<=revealed){ slider.value=revealToPct(revealed); return; }  // one-directional
+  // auto-stop: if any newly uncovered day closes 8% under the buy, sell at that close
+  if(stopChk.checked && bought!==null && sold===null){
+    for(let j=Math.max(revealed,boughtIdx+1); j<v && j<N; j++){
+      if(C.bars[j][3] <= bought*0.92){ revealed=j+1; slider.value=revealToPct(revealed); render(); doSell(true); return; }
+    }
+  }
   revealed=v;
   render(); updateButtons();
   if(revealed>=N) finish();
@@ -385,52 +477,80 @@ slider.addEventListener('input',()=>{
 
 const buyBtn=document.getElementById('buyBtn');
 const sellBtn=document.getElementById('sellBtn');
-
-let markers=[];
 buyBtn.addEventListener('click',()=>{
   if(buyBtn.disabled) return;
   bought=execPrice(); boughtIdx=execIndex();
-  candle.createPriceLine({price:bought,color:'#1f6f54',lineWidth:2,lineStyle:0,
-    axisLabelVisible:false,title:'BUY'});
-  markers.push({time:TS[execIndex()],position:'belowBar',color:'#1f6f54',shape:'arrowUp',text:'BUY'});
-  markers.sort((a,b)=>a.time-b.time);
-  candle.setMarkers(markers);
+  candle.createPriceLine({price:bought,color:'#1f6f54',lineWidth:2,lineStyle:0,axisLabelVisible:false,title:'BUY'});
+  markers.push({time:TS[boughtIdx],position:'belowBar',color:'#1f6f54',shape:'arrowUp',text:'BUY'});
+  paintMarkers(Math.min(revealed,N));
   buyBtn.classList.add('filled');
-  buyBtn.textContent='✓ Bought on day '+(execIndex()+1);
+  buyBtn.textContent='✓ Bought on day '+(boughtIdx+1);
   updateButtons(); updateTicket();
 });
-sellBtn.addEventListener('click',()=>{
-  if(sellBtn.disabled) return;
-  sold=execPrice(); soldIdx=execIndex();
-  candle.createPriceLine({price:sold,color:'#a8322d',lineWidth:2,lineStyle:0,
-    axisLabelVisible:false,title:'SELL'});
-  markers.push({time:TS[execIndex()],position:'aboveBar',color:'#a8322d',shape:'arrowDown',text:'SELL'});
-  markers.sort((a,b)=>a.time-b.time);
-  candle.setMarkers(markers);
+function doSell(stopped){
+  sold=execPrice(); soldIdx=execIndex(); stoppedOut=!!stopped;
+  candle.createPriceLine({price:sold,color:'#a8322d',lineWidth:2,lineStyle:0,axisLabelVisible:false,title:stopped?'STOP':'SELL'});
+  markers.push({time:TS[soldIdx],position:'aboveBar',color:'#a8322d',shape:'arrowDown',text:stopped?'STOP':'SELL'});
+  paintMarkers(Math.min(revealed,N));
   sellBtn.classList.add('filled');
-  sellBtn.textContent='✓ Sold on day '+(execIndex()+1);
+  sellBtn.textContent=(stopped?'✓ Stopped out on day ':'✓ Sold on day ')+(soldIdx+1);
   locked=true; updateButtons(); updateTicket();
-  revealAllThenFinish();
-});
-
-function revealAllThenFinish(){
   revealed=N; slider.value=100; render(); updateButtons(); finish();
 }
+sellBtn.addEventListener('click',()=>{ if(!sellBtn.disabled) doSell(false); });
 
-// ---- perfect return: best buy-low-then-sell-higher-after over the whole chart ----
+// ---- perfect return (closes only, from the first tradeable day) ----
+function firstTradeable(){ let f=SEED-1; while(Math.round((f+1-SEED)/span*100) < 15) f++; return f; }
 function perfectReturn(){
-  // Closes only: the player can only fill at a close, so "perfect" uses closes too.
-  // Buying is only allowed once 15% is uncovered, so the perfect buy obeys that too.
-  let first = SEED-1;
-  while(Math.round((first+1-SEED)/span*100) < 15) first++;
-  let lowestSoFar=C.bars[first][3];
-  let best=0, bestBuy=lowestSoFar, bestSell=lowestSoFar;
+  const first=firstTradeable();
+  let lowestSoFar=C.bars[first][3], best=0;
   for(let i=first;i<N;i++){
-    if(C.bars[i][3] < lowestSoFar){ lowestSoFar=C.bars[i][3]; }
-    const ret=(C.bars[i][3]-lowestSoFar)/lowestSoFar*100;
-    if(ret>best){ best=ret; bestBuy=lowestSoFar; bestSell=C.bars[i][3]; }
+    if(C.bars[i][3] < lowestSoFar) lowestSoFar=C.bars[i][3];
+    best=Math.max(best,(C.bars[i][3]-lowestSoFar)/lowestSoFar*100);
   }
-  return {buy:bestBuy, sell:bestSell, ret:best};
+  return {ret:best};
+}
+
+// ---- coach: what a rules trader did, and how the player's trade compares ----
+const pct = x => (x*100).toFixed(1)+'%';
+const sgn = x => (x>=0?'+':'')+(x*100).toFixed(1)+'%';
+function coach(){
+  const b=C.breakoutIdx, piv=C.pivot, cl=i=>C.bars[i][3];
+  let rule, ruleRet=null;
+  if(cl(b) > piv*1.05){
+    rule='The breakout on day '+(b+1)+' closed '+pct(cl(b)/piv-1)+' above the base high, past the 5% buy zone. A rules trader does not chase that, so no trade.';
+  } else {
+    const buy=cl(b); let exit=N-1, why='still holding when the chart ended';
+    for(let j=b+1;j<N;j++){
+      if(cl(j)<=buy*0.92){ exit=j; why='stopped out at 8% down'; break; }
+      if(cl(j)>=buy*1.20){ exit=j; why='took profits at 20% up'; break; }
+    }
+    ruleRet=cl(exit)/buy-1;
+    rule='Bought the breakout close on day '+(b+1)+', '+pct(buy/piv-1)+' above the base high. Out on day '+(exit+1)+', '+why+'. Result <b>'+sgn(ruleRet)+'</b>.';
+  }
+  const notes=[];
+  const failedish = C.fail || C.bucket==='no-trade';
+  if(bought===null){
+    notes.push(failedish ? 'Sitting out matched the outcome. This breakout did not hold.'
+                         : 'You sat out a breakout that worked. The rules bought on day '+(b+1)+'.');
+  } else {
+    if(boughtIdx < b) notes.push('You bought on day '+(boughtIdx+1)+', inside the base, before the breakout on day '+(b+1)+'. Early buys can pay, but they skip the confirmation a breakout gives.');
+    else {
+      const x=bought/piv-1;
+      notes.push(x<=0.05 ? 'You bought '+pct(x)+' above the base high, inside the 5% buy zone. Textbook entry.'
+                         : 'You bought '+pct(x)+' above the base high, past the 5% buy zone. That is chasing, and it leaves less room before an 8% stop.');
+    }
+    const end = sold!==null ? soldIdx : N-1;
+    let hit=-1; for(let j=boughtIdx+1;j<=end;j++){ if(cl(j)<=bought*0.92){ hit=j; break; } }
+    if(stoppedOut) notes.push('Your stop sold it on day '+(soldIdx+1)+'. The stop did its job: a small loss instead of a big one.');
+    else if(hit>=0 && (sold===null || soldIdx>hit)) notes.push('Day '+(hit+1)+' closed 8% below your buy. The rule is to cut there, and you held'+(sold!==null?' until day '+(soldIdx+1):'')+'.');
+    else if(sold!==null && sold<bought) notes.push('You cut the loss before it reached 8%. That discipline is what keeps a bad trade small.');
+    if(sold!==null && sold/bought-1>=0.20) notes.push('You took a gain of 20% or more, right where the rules take profits.');
+    if(sold===null) notes.push('You never sold, so the trade was closed at the last day.');
+  }
+  document.getElementById('coachRule').innerHTML=rule;
+  document.getElementById('coachNotes').innerHTML=notes.map(n=>'<li>'+n+'</li>').join('');
+  return ruleRet;
 }
 
 function finish(){
@@ -439,21 +559,15 @@ function finish(){
   const perfect=perfectReturn();
   const youRet = (bought!==null && sold!==null) ? (sold-bought)/bought*100
                : (bought!==null) ? (C.bars[N-1][3]-bought)/bought*100 : 0;
-
-  const rYou=document.getElementById('rYou');
-  const rPerfect=document.getElementById('rPerfect');
-  rYou.textContent=(youRet>=0?'+':'')+youRet.toFixed(1)+'%';
-  rYou.className='v '+(youRet>=0?'pos':'neg');
-  rPerfect.textContent='+'+perfect.ret.toFixed(1)+'%';
-  rPerfect.className='v pos';
-
-  // capture = how much of the available move you grabbed
+  const rYou=document.getElementById('rYou'), rPerfect=document.getElementById('rPerfect');
+  rYou.textContent=(youRet>=0?'+':'')+youRet.toFixed(1)+'%'; rYou.className='v '+(youRet>=0?'pos':'neg');
+  rPerfect.textContent='+'+perfect.ret.toFixed(1)+'%'; rPerfect.className='v pos';
   const capture = perfect.ret>0 ? Math.max(0, youRet/perfect.ret) : 0;
   const capPct = Math.round(capture*100);
-
+  const failedish = C.fail || C.bucket==='no-trade';
   let verdict;
-  if(bought===null) verdict='Sat it out';
-  else if(youRet<=-2) verdict='Caught a loss';
+  if(bought===null) verdict = failedish ? 'Good pass' : 'Sat it out';
+  else if(youRet<=-2) verdict = stoppedOut ? 'Stopped out small' : 'Caught a loss';
   else if(youRet<0) verdict='Got out flat';
   else if(capture>=0.75) verdict='Nailed it';
   else if(capture>=0.45) verdict='Strong read';
@@ -461,45 +575,36 @@ function finish(){
   else verdict='Toe in the water';
   document.getElementById('verdict').textContent=verdict;
   document.getElementById('captureLbl').textContent = bought!==null ? capPct+'% of the move' : '';
-
-  // capture line — progress-positive, never makes a real gain feel like a miss
   const cl=document.getElementById('captureLine');
-  if(bought===null){
-    cl.innerHTML='You watched this one go by. No money in, no money out. Reading without trading is a fine way to learn the shape.';
-  } else if(youRet>0){
-    cl.innerHTML='You turned <b>+'+youRet.toFixed(1)+'%</b> out of a possible <b>+'+perfect.ret.toFixed(1)+'%</b> — that\'s <b>'+capPct+'%</b> of the whole move. Nobody catches the exact bottom and top. Banking a real gain beats holding out for a perfect one.';
-  } else {
-    cl.innerHTML='This one didn\'t pay. You finished <b>'+youRet.toFixed(1)+'%</b>. Getting out small is the win on a trade that doesn\'t work.';
-  }
-
-  // About this chart
+  if(bought===null) cl.innerHTML = failedish ? 'You stayed out of a breakout that did not hold. Sitting out is a real decision, and here it was the right one.'
+                                             : 'You watched this one go by. No money in, no money out. Reading without trading is a fine way to learn the shape.';
+  else if(youRet>0) cl.innerHTML='You turned <b>+'+youRet.toFixed(1)+'%</b> out of a possible <b>+'+perfect.ret.toFixed(1)+'%</b>, which is <b>'+capPct+'%</b> of the whole move. Nobody catches the exact bottom and top. Banking a real gain beats holding out for a perfect one.';
+  else cl.innerHTML='This one did not pay. You finished <b>'+youRet.toFixed(1)+'%</b>. Getting out small is the win on a trade that does not work.';
+  coach();
   const a=C.about||{};
   document.getElementById('aboutTitle').textContent='About '+C.name+' ('+C.ticker+')';
   document.getElementById('aWhat').textContent=a.what||'';
   document.getElementById('aSetup').textContent=a.setup||'';
   document.getElementById('aOutcome').textContent=a.outcome||'';
   document.getElementById('aLesson').textContent=a.lesson||'';
-
-  // Reveal identity and real price level
+  // reveal identity, real price level, the base high and the breakout day
   document.getElementById('coname').firstChild.textContent=C.name;
   document.getElementById('cosym').textContent=C.ticker;
   chart.applyOptions({rightPriceScale:{visible:true},crosshair:{horzLine:{labelVisible:true}}});
+  candle.createPriceLine({price:C.pivot,color:'#c8881f',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'base high'});
+  markers.push({time:TS[C.breakoutIdx],position:'belowBar',color:'#c8881f',shape:'circle',text:'breakout'});
   render();
-  recordStreak(youRet>0);
+  if(!MODE.practice) recordStreak(youRet>0 || (bought===null && failedish));
   document.getElementById('result').classList.add('show');
   document.getElementById('result').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-// ---- local streak (per-browser, soft identity) ----
-function store(k,v){try{localStorage.setItem(k,v)}catch(e){}}
-function load(k){try{return localStorage.getItem(k)}catch(e){return null}}
+// ---- local streak (per-browser) ----
 function recordStreak(win){
   const lastDay=parseInt(load('pivot_lastday')||'-999',10);
-  if(lastDay===DAY) return; // already played today
-  let streak=parseInt(load('pivot_streak')||'0',10);
-  let played=parseInt(load('pivot_played')||'0',10);
-  streak = win ? (lastDay===DAY-1?streak+1:1) : 0;
-  played+=1;
+  if(lastDay===DAY) return;
+  let streak=parseInt(load('pivot_streak')||'0',10), played=parseInt(load('pivot_played')||'0',10);
+  streak = win ? (lastDay===DAY-1?streak+1:1) : 0; played+=1;
   store('pivot_streak',streak); store('pivot_played',played); store('pivot_lastday',DAY);
   store('pivot_result_'+DAY, JSON.stringify({win}));
   paintStreak();
@@ -510,30 +615,51 @@ function paintStreak(){
 }
 
 // ---- share ----
+function shareLabel(){ return MODE.practice ? 'BREAKOUT practice' : 'BREAKOUT, Chart No. '+DAY; }
 document.getElementById('shareBtn').addEventListener('click',()=>{
-  const v=document.getElementById('verdict').textContent;
-  const y=document.getElementById('rYou').textContent;
-  const txt='BREAKOUT — Chart No. '+(DAY)+'\n'+v+'  ·  my return '+y+'\nread the base, time the breakout';
+  const v=document.getElementById('verdict').textContent, y=document.getElementById('rYou').textContent;
+  const txt=shareLabel()+'\n'+v+'  ·  my return '+y+'\nbreakout.aroundthetabletop.com';
   navigator.clipboard?.writeText(txt).then(()=>{
-    const b=document.getElementById('shareBtn'); b.textContent='Copied ✓';
-    setTimeout(()=>b.textContent='Copy result',1500);
+    const b=document.getElementById('shareBtn'); b.textContent='Copied ✓'; setTimeout(()=>b.textContent='Copy result',1500);
+  });
+});
+document.getElementById('shareImgBtn').addEventListener('click',()=>{
+  // spoiler-free: hide the price axis for the snapshot, no company name on the card
+  chart.applyOptions({rightPriceScale:{visible:false}});
+  const shot=chart.takeScreenshot();
+  chart.applyOptions({rightPriceScale:{visible:true}});
+  const W=shot.width, H=shot.height+96, cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const g=cv.getContext('2d');
+  g.fillStyle='#f3efe6'; g.fillRect(0,0,W,H);
+  g.fillStyle='#11161c'; g.font='bold 30px Courier New, monospace'; g.fillText('BREAKOUT.',16,38);
+  g.font='15px Courier New, monospace';
+  g.fillText(shareLabel()+'  ·  '+document.getElementById('verdict').textContent+'  ·  '+document.getElementById('rYou').textContent,16,66);
+  g.fillStyle='#6b6456'; g.fillText('breakout.aroundthetabletop.com',16,88);
+  g.drawImage(shot,0,96);
+  cv.toBlob(async blob=>{
+    const f=new File([blob],'breakout.png',{type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[f]})){ try{ await navigator.share({files:[f],title:'BREAKOUT'}); return; }catch(e){} }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='breakout.png'; a.click();
   });
 });
 
 // ---- init ----
 document.getElementById('coname').firstChild.textContent='Mystery chart';
 document.getElementById('cosym').textContent='name revealed after you sell';
-document.getElementById('puzzleid').textContent='Chart No. '+DAY;
 document.getElementById('dateline').textContent=new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}).toUpperCase();
-paintStreak();
-render(); updateButtons();
-
-// already played today? show prior result lock
-if(parseInt(load('pivot_lastday')||'-999',10)===DAY){
-  const help=document.getElementById('help');
-  help.innerHTML='<b>You\'ve already played today\'s chart.</b> A new one unlocks at midnight. Drag through to review it, or come back tomorrow.';
+if(MODE.practice){
+  document.getElementById('sessionlbl').textContent='Practice';
+  document.getElementById('puzzleid').textContent='Practice · '+(KIND_LABEL[PRACTICE]||'Any');
+  document.getElementById('streakwrap').style.display='none';
+  document.getElementById('nextLine').innerHTML='<a href="?practice='+encodeURIComponent(PRACTICE)+'">Another practice chart →</a> · <a href="./">Today\'s chart</a>';
+} else {
+  document.getElementById('puzzleid').textContent='Chart No. '+DAY;
+  paintStreak();
+  if(parseInt(load('pivot_lastday')||'-999',10)===DAY)
+    document.getElementById('help').innerHTML='<b>You\'ve already played today\'s chart.</b> A new one unlocks at midnight. Drag through to review it, or <a href="?practice=all">practice with past charts</a>.';
 }
-
+paintProBtn();
+render(); updateButtons();
 new ResizeObserver(()=>{chart.applyOptions({width:chartEl.clientWidth});volChart.applyOptions({width:volEl.clientWidth});}).observe(chartEl);
 }
 </script>
