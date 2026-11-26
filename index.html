@@ -3,7 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>BREAKOUT — the daily chart-reading game</title>
+<title>BREAKOUT. The daily chart-reading game</title>
+<meta name="description" content="A free daily chart-reading game. One real historical stock chart a day, covered. Uncover it, make one buy and one sell, and see how much of the move you caught.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://breakout.aroundthetabletop.com/">
+<meta property="og:title" content="BREAKOUT. The daily chart-reading game">
+<meta property="og:description" content="One real historical stock chart a day, covered. Uncover it, make one buy and one sell, and see how much of the move you caught.">
+<meta property="og:image" content="https://breakout.aroundthetabletop.com/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f3efe6">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%2311161c'/%3E%3Crect x='7' y='12' width='5' height='12' fill='%23a8322d'/%3E%3Crect x='9' y='9' width='1' height='18' fill='%23a8322d'/%3E%3Crect x='15' y='14' width='5' height='8' fill='%231f6f54'/%3E%3Crect x='17' y='11' width='1' height='14' fill='%231f6f54'/%3E%3Crect x='22' y='5' width='5' height='14' fill='%23c8881f'/%3E%3Crect x='24' y='3' width='1' height='19' fill='%23c8881f'/%3E%3C/svg%3E">
+
 <script>
 /* lightweight-charts v4.1.3 (TradingView, Apache-2.0) bundled inline */
 /*!
@@ -186,6 +197,17 @@
   .practicebar{display:none;border:1px solid var(--rule);background:#fbf8f1;padding:8px 12px;margin-bottom:12px;
     font-size:11px;letter-spacing:.08em;line-height:1.9}
   .practicebar a{margin-right:10px;cursor:pointer}
+  @media(max-width:520px){
+    .subbar{flex-wrap:wrap;gap:6px}
+    .prostrip{font-size:9px;padding:6px 10px;gap:4px 10px}
+    .legend{font-size:9px;line-height:1.8;padding:5px 10px}
+    .legend i{margin-left:6px}
+    .epscard{font-size:10px;padding:7px 10px}
+    .coach{padding:10px;font-size:11px}
+    .coach ul{padding-left:16px}
+    .about-row{grid-template-columns:78px 1fr}
+    .sharerow{grid-template-columns:1fr}
+  }
   .practicebar a.cur{font-weight:700;text-decoration:none;border-bottom:2px solid var(--accent)}
 </style>
 </head>
@@ -205,7 +227,7 @@
     <span id="puzzleid">Chart No. —</span>
     <span class="right">
       <span class="streak" id="streakwrap">Streak <b id="streak">0</b> · Played <b id="played">0</b></span>
-      <button class="pro" id="proBtn" title="Moving averages, relative strength, market direction and earnings">Pro: off</button>
+      <button class="pro" id="proBtn" title="Moving averages, relative strength, market direction and earnings. Turn off for a bare chart.">Indicators: on</button>
     </span>
   </div>
 
@@ -373,7 +395,8 @@ let revealed = SEED;
 let bought=null, sold=null, locked=false, boughtIdx=null, soldIdx=null, finished=false, stoppedOut=false;
 function store(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 function load(k){try{return localStorage.getItem(k)}catch(e){return null}}
-let pro = load('breakout_pro')==='1';
+const proSaved = load('breakout_pro');
+let pro = proSaved===null ? true : proSaved==='1';   // indicators on by default; a saved choice wins
 
 const slider=document.getElementById('slider');
 slider.min=0; slider.max=100; slider.value=0;
@@ -421,7 +444,7 @@ function paintPro(vis){
   }
 }
 const proBtn=document.getElementById('proBtn');
-function paintProBtn(){ proBtn.textContent = P ? ('Pro: '+(pro?'on':'off')) : 'Pro: n/a'; proBtn.classList.toggle('on',pro&&!!P); proBtn.disabled=!P; }
+function paintProBtn(){ proBtn.textContent = P ? ('Indicators: '+(pro?'on':'off')) : 'Indicators: n/a'; proBtn.classList.toggle('on',pro&&!!P); proBtn.disabled=!P; }
 proBtn.addEventListener('click',()=>{ pro=!pro; store('breakout_pro',pro?'1':'0'); paintProBtn(); render(); });
 
 function render(){
@@ -522,8 +545,8 @@ function coach(){
   } else {
     const buy=cl(b); let exit=N-1, why='still holding when the chart ended';
     for(let j=b+1;j<N;j++){
-      if(cl(j)<=buy*0.92){ exit=j; why='stopped out at 8% down'; break; }
-      if(cl(j)>=buy*1.20){ exit=j; why='took profits at 20% up'; break; }
+      if(cl(j)<=buy*0.92){ exit=j; why='stopped out on the first close 8% or more below the buy'; break; }
+      if(cl(j)>=buy*1.20){ exit=j; why='took profits on the first close 20% or more above the buy'; break; }
     }
     ruleRet=cl(exit)/buy-1;
     rule='Bought the breakout close on day '+(b+1)+', '+pct(buy/piv-1)+' above the base high. Out on day '+(exit+1)+', '+why+'. Result <b>'+sgn(ruleRet)+'</b>.';
@@ -537,7 +560,8 @@ function coach(){
     if(boughtIdx < b) notes.push('You bought on day '+(boughtIdx+1)+', inside the base, before the breakout on day '+(b+1)+'. Early buys can pay, but they skip the confirmation a breakout gives.');
     else {
       const x=bought/piv-1;
-      notes.push(x<=0.05 ? 'You bought '+pct(x)+' above the base high, inside the 5% buy zone. Textbook entry.'
+      if(x<0) notes.push('You bought on day '+(boughtIdx+1)+', after the breakout, when price had slipped back '+pct(-x)+' below the base high. Buying a pullback can work, but price back under the level is a warning sign.');
+      else notes.push(x<=0.05 ? 'You bought '+pct(x)+' above the base high, inside the 5% buy zone. Textbook entry.'
                          : 'You bought '+pct(x)+' above the base high, past the 5% buy zone. That is chasing, and it leaves less room before an 8% stop.');
     }
     const end = sold!==null ? soldIdx : N-1;
