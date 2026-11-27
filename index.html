@@ -222,6 +222,39 @@
     font-size:11px;letter-spacing:.04em;line-height:1.5;text-decoration:none;text-align:center}
   .recap:hover{background:#f6f1e6}
   .practicebar a.cur{font-weight:700;text-decoration:none;border-bottom:2px solid var(--accent)}
+  /* ---- v4: one trade button, bottom dock, how-to ---- */
+  .help:empty{display:none}
+  .dock{position:sticky;bottom:0;z-index:20;background:var(--paper);border-top:1px solid var(--rule);
+    margin:12px -2px 0;padding:10px 2px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -8px 16px -12px rgba(17,22,28,.35)}
+  .dock.done{display:none}
+  .dockstat{font-size:11px;line-height:1.45;color:var(--ink);letter-spacing:.03em;margin-bottom:8px;min-height:16px}
+  .dockstat .stp{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-right:6px;font-weight:700}
+  .dockstat .pos{color:var(--buy)} .dockstat .neg{color:var(--sell)}
+  .dock .reveal{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+  .dock .reveal input{flex:1}
+  .dock .pct{font-size:10px;letter-spacing:.1em;color:var(--muted);min-width:34px;text-align:right}
+  .dockrow{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+  .dockrow button.act{padding:14px 8px;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+  button.step{border-color:var(--ink)}
+  button.trade.sell{border-color:var(--sell);color:var(--sell)}
+  button.trade.buy:not(:disabled){background:var(--buy);color:var(--paper);border-color:var(--buy)}
+  button.trade.sell:not(:disabled){background:var(--sell);color:var(--paper)}
+  .dock .stopopt{margin-top:8px;font-size:10px}
+  .foot a{color:var(--muted)}
+  .howto{display:none;position:fixed;inset:0;z-index:50;background:rgba(17,22,28,.55);align-items:center;justify-content:center;padding:16px}
+  .howto.show{display:flex}
+  .howbox{background:var(--paper);max-width:420px;width:100%;max-height:90vh;overflow:auto;padding:20px;border:1.5px solid var(--ink)}
+  .howT{font-size:12px;letter-spacing:.24em;text-transform:uppercase;font-weight:700;margin-bottom:12px}
+  .howsteps{margin:0;padding:0;list-style:none;counter-reset:s}
+  .howsteps li{counter-increment:s;position:relative;padding:10px 0 10px 40px;border-top:1px solid var(--rule);font-size:12px;line-height:1.5}
+  .howsteps li::before{content:counter(s);position:absolute;left:0;top:10px;width:26px;height:26px;line-height:26px;text-align:center;
+    background:var(--ink);color:var(--paper);font-weight:700}
+  .howsteps b{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:2px}
+  .hownote{font-size:11px;line-height:1.5;color:var(--muted);border-top:1px solid var(--rule);padding-top:10px;margin:0}
+  .howmore{margin-top:10px;font-size:11px;line-height:1.55;color:var(--muted)}
+  .howmore summary{cursor:pointer;color:var(--ink);letter-spacing:.06em}
+  button.gotit{width:100%;margin-top:14px;background:var(--ink);color:var(--paper)}
+  @media(max-width:520px){ .hl{display:none} #howBtn{padding:4px 10px;font-size:12px} .tag{font-size:9px} #chart{height:250px} .subbar .right{gap:6px} }
 </style>
 </head>
 <body>
@@ -240,6 +273,7 @@
     <span id="puzzleid">Chart No. —</span>
     <span class="right">
       <span class="streak" id="streakwrap">Streak <b id="streak">0</b> · Played <b id="played">0</b></span>
+      <button class="pro" id="howBtn" title="How to play" aria-label="How to play">?<span class="hl"> How to play</span></button>
       <button class="pro" id="proBtn" title="Moving averages, relative strength, market direction and earnings. Turn off for a bare chart.">Indicators: on</button>
     </span>
   </div>
@@ -271,22 +305,19 @@
     <div class="epscard" id="epsCard"></div>
   </div>
 
-  <div class="reveal">
-    <div class="lbl"><span>Reveal</span><span id="revealpct">0% shown</span></div>
-    <input type="range" id="slider" min="0" max="100" value="0">
-  </div>
-  <p class="help" id="help">Read the briefing, then drag the slider right. The chart opens with the run-up into the base already showing, and uncovers one day at a time from there. You can't slide back. When you think the breakout is real, hit Buy. Sell when your read says so. You buy and sell at the price showing when you click. You're graded on the decision, not just the profit: a good entry, respecting the 8% stop, and the result.</p>
+  <p class="help" id="help"></p>
 
-  <div class="actions">
-    <button class="act buy" id="buyBtn" disabled>▲ Buy</button>
-    <button class="act sell" id="sellBtn" disabled>▼ Sell</button>
-  </div>
-  <label class="stopopt"><input type="checkbox" id="stopChk">Auto-sell if a day closes 8% below my buy (the classic stop)</label>
-
-  <div class="ticket" id="ticket" style="display:none">
-    <div class="g">Bought <b id="tBuy">—</b></div>
-    <div class="r">Sold <b id="tSell">—</b></div>
-    <div>Open P/L <b id="tPL">—</b></div>
+  <div class="dock" id="dock">
+    <div class="dockstat" id="dockStat"></div>
+    <div class="reveal">
+      <input type="range" id="slider" min="0" max="100" value="0" aria-label="Uncover the chart">
+      <span class="pct" id="revealpct">0%</span>
+    </div>
+    <div class="dockrow">
+      <button class="act step" id="stepBtn">Next day ›</button>
+      <button class="act trade buy" id="tradeBtn" disabled>▲ Buy</button>
+    </div>
+    <label class="stopopt"><input type="checkbox" id="stopChk">Auto-sell if a day closes 8% below my buy</label>
   </div>
 
   <div class="result" id="result">
@@ -322,8 +353,23 @@
     </div>
   </div>
 
-  <div class="foot">
-    BREAKOUT is a daily chart-reading game: read the base, time the move, one buy and one sell. Every chart is a real historical stock. The name, dates and price level stay hidden until you sell. Every trade is $10,000 of play money. The rules trader uses common O'Neil-style rules: buy within 5% of the breakout level, cut at 8% down, take profits at 20% up unless the stock got there within three weeks, in which case hold for eight. Nothing here is investment advice.
+  <div class="foot">Real historical charts · play money · not investment advice · <a href="#" id="howLink">How to play</a></div>
+
+  <div class="howto" id="howto" role="dialog" aria-modal="true" aria-labelledby="howT">
+    <div class="howbox">
+      <div class="howT" id="howT">How to play</div>
+      <ol class="howsteps">
+        <li><b>Uncover</b>Tap Next day (or drag) to reveal the chart one trading day at a time. It's a daily chart: each candle is one day. No going back.</li>
+        <li><b>Buy once</b>When you think the breakout is real, hit Buy. You get one buy.</li>
+        <li><b>Sell once</b>The button turns into Sell. Hit it when your read says so. Then you see the name, the result and your grade.</li>
+      </ol>
+      <p class="hownote">Not sure about a chart? Don't buy. Uncover to the end and you pass. On a bad setup, passing earns an A.</p>
+      <details class="howmore"><summary>Scoring and the rules trader</summary>
+        <p>Every trade is $10,000 of play money. You're graded on the decision, not only the profit: a good entry, respecting the 8% stop, and the result. The name, dates and price stay hidden until you sell.</p>
+        <p>You're compared with a rules trader who buys within 5% of the breakout level, cuts at 8% down and takes profit at 20% up, unless the stock got there within three weeks, in which case it holds for eight.</p>
+      </details>
+      <button class="act gotit" id="howClose">Got it</button>
+    </div>
   </div>
 <script>
 // ---- loader: today's daily chart, or a practice chart (?practice=kind) ----
@@ -342,6 +388,7 @@ const KIND_LABEL = {all:'Any', breakouts:'Breakouts', traps:'Traps', held:'Break
 function noChart(msg){
   document.getElementById('help').innerHTML='<b>'+msg+'</b>';
   document.getElementById('cover').querySelector('em').textContent='no chart';
+  document.getElementById('dock').classList.add('done');
 }
 if(PRACTICE){
   const bar=document.getElementById('practiceBar'); bar.style.display='block';
@@ -441,8 +488,9 @@ const MKT=['Correction','Under pressure','Uptrend'], MKTC=['dn','mid','up'];
 function paintPro(vis){
   const on = pro && !!P;
   document.getElementById('proStrip').classList.toggle('show',on);
-  document.getElementById('legend').classList.toggle('show',on);
-  document.getElementById('epsCard').classList.toggle('show',on);
+  const lifted = vis > SEED;
+  document.getElementById('legend').classList.toggle('show',on && lifted);
+  document.getElementById('epsCard').classList.toggle('show',on && lifted);
   ma50S.setData(on?sliceSeries(P.ma50,vis):[]); ma200S.setData(on?sliceSeries(P.ma200,vis):[]);
   rsS.setData(on?sliceSeries(P.rs,vis):[]); vol50S.setData(on?sliceSeries(P.vol50,vis):[]);
   if(!on) return;
@@ -476,7 +524,7 @@ function render(){
   const fromStart=(last-C.bars[0][3])/C.bars[0][3]*100;
   document.getElementById('lastpx').textContent = pctNow<=0 ? '—'
     : finished ? '$'+last.toFixed(2) : (fromStart>=0?'+':'')+fromStart.toFixed(1)+'% from start';
-  document.getElementById('revealpct').textContent = pctNow+'% uncovered';
+  document.getElementById('revealpct').textContent = Math.max(0,pctNow)+'%';
   if(pctNow<=0) cover.classList.remove('gone'); else cover.classList.add('gone');
   updateTicket();
 }
@@ -484,60 +532,94 @@ function render(){
 function execIndex(){ return Math.min(revealed, N) - 1; }
 function execPrice(){ return C.bars[execIndex()][3]; }
 
+const tradeBtn=document.getElementById('tradeBtn'), stepBtn=document.getElementById('stepBtn');
 function updateButtons(){
   const playable = revealed > SEED;               // buying opens once the base is under way
-  document.getElementById('buyBtn').disabled  = locked || bought!==null || revealed>=N || !playable;
-  document.getElementById('sellBtn').disabled = locked || bought===null || sold!==null || revealed>=N;
+  if(bought===null){
+    tradeBtn.className='act trade buy'; tradeBtn.textContent='▲ Buy';
+    tradeBtn.disabled = locked || revealed>=N || !playable;
+  } else {
+    tradeBtn.className='act trade sell'; tradeBtn.textContent='▼ Sell';
+    tradeBtn.disabled = locked || sold!==null || revealed>=N;
+  }
+  stepBtn.disabled = locked || revealed>=N;
+  if(finished) document.getElementById('dock').classList.add('done');
 }
-function updateTicket(){
-  const t=document.getElementById('ticket');
-  if(bought===null){ t.style.display='none'; return; }
-  t.style.display='flex';
-  document.getElementById('tBuy').textContent= finished ? '$'+bought.toFixed(2) : 'Day '+(boughtIdx+1);
-  const px = sold!==null ? sold : C.bars[Math.min(revealed,N)-1][3];
-  if(sold!==null) document.getElementById('tSell').textContent= finished ? '$'+sold.toFixed(2) : 'Day '+(soldIdx+1);
-  const pl=((px-bought)/bought*100), el=document.getElementById('tPL');
-  el.textContent=(pl>=0?'+':'')+pl.toFixed(1)+'%';
-  el.style.color = pl>=0?'var(--buy)':'var(--sell)';
+function updateTicket(){                            // the status line above the buttons
+  const st=document.getElementById('dockStat'); if(!st) return;
+  if(bought===null){
+    st.innerHTML = revealed<=SEED
+      ? '<span class="stp">Start</span>Read the briefing, then tap Next day to uncover.'
+      : '<span class="stp">Step 1 of 2</span>Buy when the breakout looks real. One buy. Or uncover to the end to pass.';
+  } else {
+    const px=C.bars[Math.min(revealed,N)-1][3], pl=(px-bought)/bought*100;
+    st.innerHTML='<span class="stp">Step 2 of 2</span>Bought day '+(boughtIdx+1)+', now <b class="'+(pl>=0?'pos':'neg')+'">'+(pl>=0?'+':'')+pl.toFixed(1)+'%</b>. Sell when your read says so. One sell.';
+  }
 }
 
-slider.addEventListener('input',()=>{
-  const v=pctToReveal(parseInt(slider.value,10));
-  if(v<=revealed){ slider.value=revealToPct(revealed); return; }  // one-directional
+function advanceTo(v){
+  if(finished || v<=revealed) return;
+  v=Math.min(v,N);
   // auto-stop: if any newly uncovered day closes 8% under the buy, sell at that close
   if(stopChk.checked && bought!==null && sold===null){
     for(let j=Math.max(revealed,boughtIdx+1); j<v && j<N; j++){
       if(C.bars[j][3] <= bought*0.92){ revealed=j+1; slider.value=revealToPct(revealed); render(); doSell(true); return; }
     }
   }
-  revealed=v;
+  revealed=v; slider.value=revealToPct(revealed);
   render(); updateButtons();
   if(revealed>=N) finish();
+}
+slider.addEventListener('input',()=>{
+  const v=pctToReveal(parseInt(slider.value,10));
+  if(v<=revealed){ slider.value=revealToPct(revealed); return; }  // one-directional
+  advanceTo(v);
+});
+// Next day: tap for one day, hold to keep going
+let holdT=null, holdI=null;
+function stopHold(){ clearTimeout(holdT); clearInterval(holdI); holdT=holdI=null; }
+stepBtn.addEventListener('pointerdown',e=>{
+  if(stepBtn.disabled) return; e.preventDefault();
+  advanceTo(revealed+1);
+  holdT=setTimeout(()=>{ holdI=setInterval(()=>{ if(stepBtn.disabled) return stopHold(); advanceTo(revealed+1); },110); },380);
+});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>stepBtn.addEventListener(ev,stopHold));
+stepBtn.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); advanceTo(revealed+1); } });
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('howto').classList.contains('show')) return;
+  if(e.key==='ArrowRight' && e.target.tagName!=='INPUT'){ e.preventDefault(); advanceTo(revealed+1); }
 });
 
-const buyBtn=document.getElementById('buyBtn');
-const sellBtn=document.getElementById('sellBtn');
-buyBtn.addEventListener('click',()=>{
-  if(buyBtn.disabled) return;
+function doBuy(){
   bought=execPrice(); boughtIdx=execIndex();
   candle.createPriceLine({price:bought,color:'#1f6f54',lineWidth:2,lineStyle:0,axisLabelVisible:false,title:'BUY'});
   markers.push({time:TS[boughtIdx],position:'belowBar',color:'#1f6f54',shape:'arrowUp',text:'BUY'});
   paintMarkers(Math.min(revealed,N));
-  buyBtn.classList.add('filled');
-  buyBtn.textContent='✓ Bought on day '+(boughtIdx+1);
   updateButtons(); updateTicket();
-});
+}
 function doSell(stopped){
   sold=execPrice(); soldIdx=execIndex(); stoppedOut=!!stopped;
   candle.createPriceLine({price:sold,color:'#a8322d',lineWidth:2,lineStyle:0,axisLabelVisible:false,title:stopped?'STOP':'SELL'});
   markers.push({time:TS[soldIdx],position:'aboveBar',color:'#a8322d',shape:'arrowDown',text:stopped?'STOP':'SELL'});
   paintMarkers(Math.min(revealed,N));
-  sellBtn.classList.add('filled');
-  sellBtn.textContent=(stopped?'✓ Stopped out on day ':'✓ Sold on day ')+(soldIdx+1);
-  locked=true; updateButtons(); updateTicket();
+  locked=true; updateButtons();
   revealed=N; slider.value=100; render(); updateButtons(); finish();
 }
-sellBtn.addEventListener('click',()=>{ if(!sellBtn.disabled) doSell(false); });
+tradeBtn.addEventListener('click',()=>{
+  if(tradeBtn.disabled) return;
+  if(bought===null) doBuy(); else if(sold===null) doSell(false);
+});
+
+// ---- how to play: shown once, reopened from the header or footer ----
+const howto=document.getElementById('howto');
+function openHow(){ howto.classList.add('show'); document.getElementById('howClose').focus(); }
+function closeHow(){ howto.classList.remove('show'); store('breakout_seenhow','1'); }
+document.getElementById('howBtn').addEventListener('click',openHow);
+document.getElementById('howLink').addEventListener('click',e=>{ e.preventDefault(); openHow(); });
+document.getElementById('howClose').addEventListener('click',closeHow);
+howto.addEventListener('click',e=>{ if(e.target===howto) closeHow(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && howto.classList.contains('show')) closeHow(); });
+if(load('breakout_seenhow')!=='1') openHow();
 
 // ---- perfect return (closes only, from the first tradeable day) ----
 function firstTradeable(){ return Math.min(SEED, N-1); }
@@ -720,7 +802,7 @@ document.getElementById('shareImgBtn').addEventListener('click',()=>{
 
 // ---- briefing on the cover: what a trader would know on day one ----
 (function briefing(){
-  const B=C.brief||{}, k=SEED-1, rows=[];
+  const B=C.brief||{}, k=SEED-1, rows=[['Chart','Daily. Each candle is one trading day, about '+Math.round(N/21)+' months in all']];
   if(B.industry) rows.push(['Industry',B.industry]);
   if(B.size) rows.push(['Size',B.size]);
   if(B.runup!=null) rows.push(['Run-up','Climbed about '+B.runup+'% in the three months before this base']);
@@ -729,14 +811,14 @@ document.getElementById('shareImgBtn').addEventListener('click',()=>{
     if(sn) rows.push(['Earnings','Latest quarter '+(sn.q||'n/a')+' vs a year ago'+(sn.a?' · annual '+sn.a.replace(' (oldest to newest)',''):'')]); }
   const html='<div class="brief"><div class="bt">Your briefing</div>'
     + rows.map(r=>'<div class="br"><span>'+r[0]+'</span><b>'+r[1]+'</b></div>').join('')
-    + '<div class="bj">Your job: read the base and decide if the breakout is real. Buying opens once the base is under way. One buy, one sell.</div>'
-    + '<em>drag to uncover →</em></div>';
+    + '<div class="bj">Your job: decide if the breakout is real. One buy, one sell.</div>'
+    + '<em>Tap Next day to start →</em></div>';
   cover.innerHTML=html;
 })();
 
 // ---- init ----
 document.getElementById('coname').firstChild.textContent='Mystery chart';
-document.getElementById('cosym').textContent='name revealed after you sell';
+document.getElementById('cosym').textContent='daily chart · name revealed after you sell';
 document.getElementById('dateline').textContent=new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}).toUpperCase();
 if(MODE.practice){
   document.getElementById('sessionlbl').textContent='Practice';
