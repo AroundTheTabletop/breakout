@@ -329,7 +329,7 @@
       <span class="pct" id="revealpct">0%</span>
     </div>
     <div class="dockrow">
-      <button class="act step" id="stepBtn">Next day ›</button>
+      <button class="act step" id="stepBtn">Start ›</button>
       <button class="act trade buy" id="tradeBtn" disabled>▲ Buy</button>
     </div>
     <label class="stopopt"><input type="checkbox" id="stopChk">Auto-sell if a day closes 8% below my buy</label>
@@ -378,7 +378,7 @@
     <div class="howbox">
       <div class="howT" id="howT">How to play</div>
       <ol class="howsteps">
-        <li><b>Uncover</b>Tap Next day (or drag) to reveal the chart one trading day at a time. It's a daily chart: each candle is one day. No going back.</li>
+        <li><b>Uncover</b>Tap Start, then Next day (or drag) to reveal the chart one trading day at a time. It's a daily chart: each candle is one day. No going back.</li>
         <li><b>Buy once</b>When you think the breakout is real, hit Buy. You get one buy.</li>
         <li><b>Sell once</b>The button turns into Sell. Hit it when your read says so. Then you see the name, the result and your grade.</li>
       </ol>
@@ -562,13 +562,14 @@ function updateButtons(){
     tradeBtn.disabled = locked || sold!==null || revealed>=N;
   }
   stepBtn.disabled = locked || revealed>=N;
+  stepBtn.textContent = revealed<=SEED ? 'Start ›' : 'Next day ›';
   if(finished) document.getElementById('dock').classList.add('done');
 }
 function updateTicket(){                            // the status line above the buttons
   const st=document.getElementById('dockStat'); if(!st) return;
   if(bought===null){
     st.innerHTML = revealed<=SEED
-      ? '<span class="stp">Start</span>Read the briefing, then tap Next day to uncover.'
+      ? '<span class="stp">Start</span>Read the briefing, then tap Start to uncover the chart.'
       : '<span class="stp">Step 1 of 2</span>Buy when the breakout looks real. One buy. Or uncover to the end to pass.';
   } else {
     const px=C.bars[Math.min(revealed,N)-1][3], pl=(px-bought)/bought*100;
@@ -864,7 +865,7 @@ document.getElementById('shareImgBtn').addEventListener('click',()=>{
   const html='<div class="brief"><div class="bt">Your briefing</div>'
     + rows.map(r=>'<div class="br"><span>'+r[0]+'</span><b>'+r[1]+'</b></div>').join('')
     + '<div class="bj">Your job: decide if the breakout is real. One buy, one sell.</div>'
-    + '<em>Tap Next day to start →</em></div>';
+    + '<em>Tap Start below →</em></div>';
   cover.innerHTML=html;
 })();
 
