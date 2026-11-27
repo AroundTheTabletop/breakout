@@ -16,6 +16,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%2311161c'/%3E%3Crect x='7' y='12' width='5' height='12' fill='%23a8322d'/%3E%3Crect x='9' y='9' width='1' height='18' fill='%23a8322d'/%3E%3Crect x='15' y='14' width='5' height='8' fill='%231f6f54'/%3E%3Crect x='17' y='11' width='1' height='14' fill='%231f6f54'/%3E%3Crect x='22' y='5' width='5' height='14' fill='%23c8881f'/%3E%3Crect x='24' y='3' width='1' height='19' fill='%23c8881f'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
+<script data-goatcounter="https://aroundthetabletop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <meta name="apple-mobile-web-app-title" content="BREAKOUT">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -408,6 +409,19 @@
 const LAUNCH = "2026-11-26";                     // chart No. 1 plays this day
 function localISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 const TODAY = localISO(new Date());
+// ---- visit counter (GoatCounter: no cookies, no personal data) ----
+function gcEvent(name){
+  const send=()=>{ try{ window.goatcounter.count({path:name, title:name, event:true}); }catch(_){} };
+  if(window.goatcounter && window.goatcounter.count) send(); else window.addEventListener('load',()=>setTimeout(send,800),{once:true});
+}
+(function visits(){
+  const get=k=>{try{return localStorage.getItem(k)}catch(_){return null}}, put=(k,v)=>{try{localStorage.setItem(k,v)}catch(_){}};
+  const src=new URLSearchParams(location.search).get('utm_source');
+  if(!get('breakout_src')) put('breakout_src', src||'direct');            // where this player first came from
+  const last=get('breakout_lastvisit');
+  if(last && last!==TODAY){ gcEvent('return-visit'); gcEvent('return-visit/'+get('breakout_src')); }
+  put('breakout_lastvisit', TODAY);
+})();
 // Android/Chrome offers a one-tap install; catch it early so the home screen tip can use it
 window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); window.__bip=e; });
 window.addEventListener('appinstalled',()=>{ try{localStorage.setItem('breakout_hometip','-1')}catch(_){} const t=document.getElementById('homeTip'); if(t) t.hidden=true; });
@@ -595,6 +609,7 @@ function updateTicket(){                            // the status line above the
 
 function advanceTo(v){
   if(finished || v<=revealed) return;
+  if(revealed===SEED) gcEvent('started/'+(MODE.practice?'practice':MODE.replay?'replay':'daily'));
   v=Math.min(v,N);
   // auto-stop: if any newly uncovered day closes 8% under the buy, sell at that close
   if(stopChk.checked && bought!==null && sold===null){
@@ -664,6 +679,7 @@ document.getElementById('homeTipGo').addEventListener('click',async()=>{
   const e=window.__bip; if(!e) return; e.prompt();
   try{ const c=await e.userChoice; if(c.outcome==='accepted'){ store('breakout_hometip','-1'); document.getElementById('homeTip').hidden=true; } }catch(_){}
 });
+document.querySelector('.recap').addEventListener('click',()=>gcEvent('recap-click'));
 document.getElementById('homeTipNo').addEventListener('click',()=>{ document.getElementById('homeTip').hidden=true; });
 
 // ---- how to play: shown once, reopened from the header or footer ----
@@ -806,6 +822,7 @@ function finish(){
   markers.push({time:TS[C.breakoutIdx],position:'belowBar',color:'#11161c',shape:'arrowUp',text:'breakout'});
   render();
   if(!MODE.practice && !MODE.replay){ recordStreak(lastResult.good, lastResult.ret); paintAccount(); homeTip(); }
+  gcEvent('finished/'+(MODE.practice?'practice':MODE.replay?'replay':'daily')+'/'+(function(){try{return localStorage.getItem('breakout_src')||'direct'}catch(_){return 'direct'}})());
   document.getElementById('result').classList.add('show');
   document.getElementById('result').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
@@ -856,12 +873,14 @@ function resultLines(){
 }
 const SITE='https://breakout.aroundthetabletop.com';
 document.getElementById('shareBtn').addEventListener('click',async()=>{
+  gcEvent('share/text');
   const txt=resultLines().join('\n')+'\nCan you read the chart?';
   const btn=document.getElementById('shareBtn');
   if(navigator.share){ try{ await navigator.share({text:txt+'\n'+SITE}); return; }catch(e){ if(e.name==='AbortError') return; } }
   try{ await navigator.clipboard.writeText(txt+'\n'+SITE); btn.textContent='Copied ✓'; setTimeout(()=>btn.textContent='Share result',1500); }catch(e){}
 });
 document.getElementById('shareImgBtn').addEventListener('click',()=>{
+  gcEvent('share/image');
   // a result card: grade and return up top, the chart without its price axis below (no name, no prices)
   chart.applyOptions({rightPriceScale:{visible:false}});
   const shot=chart.takeScreenshot();
