@@ -809,6 +809,7 @@ function finish(){
   const youRet = (bought!==null && sold!==null) ? (sold-bought)/bought
                : (bought!==null) ? (C.bars[N-1][3]-bought)/bought : 0;
   const ft=firstTradeable(), holdRet=C.bars[N-1][3]/C.bars[ft][3]-1;
+  const SPX=(P&&P.spx)||null, mktRet=(SPX&&SPX[N-1]&&SPX[ft]) ? SPX[N-1]/SPX[ft]-1 : null;   // S&P 500 over the same days
   const ruleRet=coach();
   const G=grade(youRet);
   const STAKE=10000, money=x=>(x<0?'-$':'$')+Math.abs(Math.round(x)).toLocaleString('en-US');
@@ -821,11 +822,12 @@ function finish(){
     mb.textContent=(d>=0?'+':'-')+money(Math.abs(d)).replace('-',''); mb.className='mbig '+(d>=0?'pos':'neg');
     ms.textContent='$10,000 in, '+money(out)+' out · '+sgn(youRet); }
   const pc=r=>'<b class="'+(r>=0?'pos':'neg')+'">'+sgn(r)+'</b>';
-  let vs='Rules trader '+(ruleRet===null?'<b>no trade</b>':pc(ruleRet))+' · Hold the whole chart '+pc(holdRet);
+  let vs='Rules trader '+(ruleRet===null?'<b>no trade</b>':pc(ruleRet))+' · Hold the whole chart '+pc(holdRet)+(mktRet===null?'':' · The market (S&amp;P 500) '+pc(mktRet));
+  if(mktRet!==null && bought!==null) vs+='<br>'+(youRet>mktRet ? 'You beat the market on this one by '+(Math.abs(youRet-mktRet)*100).toFixed(1)+' points.' : 'The market did better than your trade on this one, by '+(Math.abs(youRet-mktRet)*100).toFixed(1)+' points.');
   if(ruleRet!==null && ruleRet<0) vs+='<br>The rules lost here. '+(C.fail?'The breakout failed, so the stop did its job and took a small loss.':'Even good rules take small losses.');
   if(!MODE.practice && !MODE.replay) vs += '<br><span id="acctLine"></span>';
   document.getElementById('vsLine').innerHTML=vs;
-  lastResult={ret:bought===null?0:youRet, good:G.points>=6, letter:G.letter, label:G.label, traded:bought!==null, dollars:bought===null?0:STAKE*youRet, rule:ruleRet};
+  lastResult={ret:bought===null?0:youRet, good:G.points>=6, letter:G.letter, label:G.label, traded:bought!==null, dollars:bought===null?0:STAKE*youRet, rule:ruleRet, mkt:mktRet};
   const a=C.about||{};
   document.getElementById('aboutTitle').textContent='About '+C.name+' ('+C.ticker+')';
   document.getElementById('aWhat').textContent=a.what||'';
@@ -890,6 +892,7 @@ function resultLines(){
   const L=[shareLabel(), 'Grade '+r.letter+' · '+r.label];
   L.push(r.traded ? sgn(r.ret)+' ('+(r.dollars>=0?'+$':'-$')+Math.abs(Math.round(r.dollars)).toLocaleString('en-US')+' on $10,000)' : 'Stayed in cash');
   if(r.rule!=null) L.push('Rules trader: '+sgn(r.rule));
+  if(r.mkt!=null) L.push('The market: '+sgn(r.mkt));
   return L;
 }
 const SITE='https://breakout.aroundthetabletop.com';
@@ -917,7 +920,7 @@ document.getElementById('shareImgBtn').addEventListener('click',()=>{
   g.fillStyle = !r.traded ? '#11161c' : r.ret>=0 ? '#1f6f54' : '#a8322d'; g.font='bold 76px '+F;
   g.fillText(r.traded ? sgn(r.ret) : 'Stayed in cash',pad,345);
   g.fillStyle='#6b6456'; g.font='30px '+F;
-  const sub=(r.traded?(r.dollars>=0?'+$':'-$')+Math.abs(Math.round(r.dollars)).toLocaleString('en-US')+' on $10,000':'')+(r.rule!=null?(r.traded?'  ·  ':'')+'rules trader '+sgn(r.rule):'');
+  const sub=[r.traded?(r.dollars>=0?'+$':'-$')+Math.abs(Math.round(r.dollars)).toLocaleString('en-US')+' on $10,000':'', r.mkt!=null?'market '+sgn(r.mkt):'', r.rule!=null?'rules '+sgn(r.rule):''].filter(Boolean).join('  ·  ');
   g.fillText(sub,pad,395);
   g.fillStyle='#d8d0bf'; g.fillRect(pad,top-12,cw,2);
   g.drawImage(shot,pad,top,cw,ch);
