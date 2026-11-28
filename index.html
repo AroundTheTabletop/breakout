@@ -287,6 +287,9 @@
     text-decoration:none;font-weight:700;font-size:14px;letter-spacing:.12em;text-transform:uppercase;border:1.5px solid #11161c}
   .bigpractice small{display:block;margin-top:4px;font-weight:400;font-size:10px;letter-spacing:.06em;text-transform:none}
   .bigpractice:hover{background:#11161c;color:var(--paper)}
+  .learnlink{display:block;margin-top:6px;color:var(--ink);font-weight:700;text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px;letter-spacing:.06em}
+  .learnmore{display:block;margin-top:14px;text-align:center;font-size:12px;color:var(--ink);letter-spacing:.04em}
+  .hownote a{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -298,7 +301,7 @@
       <span class="ticker-tape" id="dateline"></span>
     </div>
     <h1>BREAKOUT<span class="dot">.</span></h1>
-    <div class="tag">Read the base · time the breakout · one buy, one sell</div>
+    <div class="tag">Read the base · time the breakout · one buy, one sell <a class="learnlink" href="/learn/">New to charts? Learn the basics →</a></div>
   </header>
 
   <div class="subbar">
@@ -389,13 +392,14 @@
           <div class="about-row"><span class="al">What happened</span><span class="av" id="aOutcome"></span></div>
         </div>
       </details>
+      <a class="learnmore" href="/learn/">New to reading charts? Learn the fundamentals →</a>
       <a class="bigpractice" id="bigPractice" href="?practice=all">Play a practice chart →<small>Unlimited past charts. Pick breakouts or traps.</small></a>
       <a class="recap" href="https://www.aroundthetabletop.com/breakout" target="_blank">Get the monthly BREAKOUT recap →</a>
       <div class="next" id="nextLine">Next daily chart unlocks at midnight</div>
     </div>
   </div>
 
-  <div class="foot">Real historical charts · play money · not investment advice · <a href="#" id="howLink">How to play</a></div>
+  <div class="foot">Real historical charts · play money · not investment advice · <a href="#" id="howLink">How to play</a> · <a href="/learn/">Learn the fundamentals</a></div>
 
   <div class="howto" id="howto" role="dialog" aria-modal="true" aria-labelledby="howT">
     <div class="howbox">
@@ -405,6 +409,7 @@
         <li><b>Buy once</b>When you think the breakout is real, hit Buy. You get one buy.</li>
         <li><b>Sell once</b>The button turns into Sell. Hit it when your read says so. Then you see the name, the result and your grade.</li>
       </ol>
+      <p class="hownote">New to stock charts? <a href="/learn/">Learn the fundamentals</a> first. It takes about five minutes.</p>
       <p class="hownote">Not sure about a chart? Don't buy. Uncover to the end and you pass. On a bad setup, passing earns an A.</p>
       <details class="howmore"><summary>Scoring and the rules trader</summary>
         <p>Every trade is $10,000 of play money. You're graded on the decision, not only the profit: a good entry, respecting the 8% stop, and the result. The name, dates and price stay hidden until you sell.</p>
