@@ -313,7 +313,7 @@
 
   <div class="practicebar" id="practiceBar">
     Practice with past charts:
-    <a data-k="all">Any</a><a data-k="breakouts">Breakouts (winners &amp; losers)</a><a data-k="traps">Traps (no-trades &amp; shakeouts)</a>
+    <a data-k="all">Any</a><a data-k="breakouts">Breakouts (winners &amp; losers)</a><a data-k="traps">Traps (no-trades, shakeouts &amp; breakdowns)</a>
     <br><a href="./">← Back to today's chart</a>
   </div>
 
@@ -441,7 +441,7 @@ const QS = new URLSearchParams(location.search);
 const PRACTICE = QS.get('practice');
 let REPLAY = QS.get('day');                         // replay a past daily chart, never a future one
 if(REPLAY && (!/^\d{4}-\d{2}-\d{2}$/.test(REPLAY) || REPLAY >= TODAY || REPLAY < LAUNCH)) REPLAY = null;
-const KIND_LABEL = {all:'Any', breakouts:'Breakouts', traps:'Traps', held:'Breakouts', failed:'Breakouts', 'no-trade':'Traps', shakeout:'Traps'};
+const KIND_LABEL = {all:'Any', breakouts:'Breakouts', traps:'Traps', held:'Breakouts', failed:'Breakouts', 'no-trade':'Traps', shakeout:'Traps', breakdown:'Traps'};
 
 function noChart(msg){
   document.getElementById('help').innerHTML='<b>'+msg+'</b>';
@@ -455,7 +455,7 @@ if(PRACTICE){
   });
   fetch('practice/index.json',{cache:'no-cache'}).then(r=>r.json()).then(list=>{
     const grp = KIND_LABEL[PRACTICE]==='Breakouts' ? 'b' : KIND_LABEL[PRACTICE]==='Traps' ? 't' : 'a';
-    const pool=list.filter(x=> grp==='a' || (grp==='b' && /(held|failed)$/.test(x.k)) || (grp==='t' && (x.k==='no-trade'||x.k==='shakeout')));
+    const pool=list.filter(x=> grp==='a' || (grp==='b' && /(held|failed)$/.test(x.k)) || (grp==='t' && (x.k==='no-trade'||x.k==='shakeout'||x.k==='breakdown')));
     if(!pool.length) throw new Error('empty');
     const pick=pool[Math.floor(Math.random()*pool.length)];
     return fetch('practice/'+pick.id+'.json').then(r=>r.json()).then(c=>startGame(c,{practice:true}));
@@ -720,7 +720,10 @@ const sgn = x => (x>=0?'+':'')+(x*100).toFixed(1)+'%';
 function coach(){
   const b=C.breakoutIdx, piv=C.pivot, cl=i=>C.bars[i][3];
   let rule, ruleRet=null;
-  if(cl(b) > piv*1.05){
+  const BD = C.bucket==='breakdown';
+  if(BD){
+    rule='The base broke down on day '+(b+1)+': it closed below the base low and never closed above the base high. With no breakout, a rules trader never buys. No trade.';
+  } else if(cl(b) > piv*1.05){
     rule='The breakout on day '+(b+1)+' closed '+pct(cl(b)/piv-1)+' above the base high, past the 5% buy zone. A rules trader does not chase that, so no trade.';
   } else {
     const buy=cl(b); let exit=N-1, why='still holding when the chart ended', holdTo=null;
@@ -739,10 +742,11 @@ function coach(){
   const notes=[];
   const failedish = C.fail || C.bucket==='no-trade';
   if(bought===null){
-    notes.push(failedish ? 'Sitting out matched the outcome. This breakout did not hold.'
+    notes.push(BD ? 'Sitting out was right. This base broke down, so there was never a breakout to buy.' : failedish ? 'Sitting out matched the outcome. This breakout did not hold.'
                          : 'You sat out a breakout that worked. The rules bought on day '+(b+1)+'.');
   } else {
-    if(boughtIdx < b) notes.push('You bought on day '+(boughtIdx+1)+', inside the base, before the breakout on day '+(b+1)+'. Early buys can pay, but they skip the confirmation a breakout gives.');
+    if(BD) notes.push('You bought on day '+(boughtIdx+1)+', but this stock never broke out. Buying a base before it proves itself is a guess, and here the base gave way below.');
+    else if(boughtIdx < b) notes.push('You bought on day '+(boughtIdx+1)+', inside the base, before the breakout on day '+(b+1)+'. Early buys can pay, but they skip the confirmation a breakout gives.');
     else {
       const x=bought/piv-1;
       if(x<0) notes.push('You bought on day '+(boughtIdx+1)+', after the breakout, when price had slipped back '+pct(-x)+' below the base high. Buying a pullback can work, but price back under the level is a warning sign.');
@@ -766,10 +770,10 @@ function coach(){
 function grade(youRet){
   const b=C.breakoutIdx, piv=C.pivot, cl=i=>C.bars[i][3];
   const failedish = C.fail || C.bucket==='no-trade';
-  if(bought===null) return failedish ? {letter:'A',label:'Good pass',points:8,parts:'no trade',why:(C.bucket==='no-trade'?'Nothing worth trading happened here, and you stayed out. Passing is a skill.':'This breakout failed, and you stayed out. Passing is a skill.')}
+  if(bought===null) return failedish ? {letter:'A',label:'Good pass',points:8,parts:'no trade',why:(C.bucket==='no-trade'?'Nothing worth trading happened here, and you stayed out. Passing is a skill.':(C.bucket==='breakdown'?'This base broke down instead of breaking out, and you stayed out. Passing is a skill.':'This breakout failed, and you stayed out. Passing is a skill.'))}
                                      : {letter:'C',label:'Missed it',points:4,parts:'no trade',why:'This breakout worked and you sat it out. No loss, but no gain either.'};
   let entry; const x=bought/piv-1;
-  if(boughtIdx<b) entry=1; else if(x<0) entry=3; else if(x<=0.05) entry=4; else if(x<=0.10) entry=2; else entry=0;
+  if(C.bucket==='breakdown') entry=0; else if(boughtIdx<b) entry=1; else if(x<0) entry=3; else if(x<=0.05) entry=4; else if(x<=0.10) entry=2; else entry=0;
   const end = sold!==null ? soldIdx : N-1;
   let breach=false; for(let j=boughtIdx+1;j<=end;j++){ if(cl(j)<=bought*0.92){ breach = !(sold!==null && soldIdx===j); break; } }
   const risk = breach ? 0 : 2;
@@ -779,7 +783,7 @@ function grade(youRet){
   const process=entry+risk;
   if(youRet>=0.10 && process<=3) label='Lucky win';
   else if(youRet<0 && process>=5) label='Good trade, bad luck';
-  const did={0:'chased it more than 10% past the breakout',1:'bought before the breakout',2:'bought 5 to 10% past the breakout, a bit late',
+  const did={0:(C.bucket==='breakdown'?'bought a base that never broke out':'chased it more than 10% past the breakout'),1:'bought before the breakout',2:'bought 5 to 10% past the breakout, a bit late',
              3:'bought after the breakout, while it sat back under the breakout level',4:'bought within 5% of the breakout'}[entry];
   const good=[], bad=[];
   (entry===4||entry===3 ? good : bad).push(did);
@@ -828,7 +832,10 @@ function finish(){
   document.getElementById('cosym').textContent=C.ticker;
   chart.applyOptions({rightPriceScale:{visible:true},crosshair:{horzLine:{labelVisible:true}}});
   candle.createPriceLine({price:C.pivot,color:'#c8881f',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'base high'});
-  markers.push({time:TS[C.breakoutIdx],position:'belowBar',color:'#11161c',shape:'arrowUp',text:'breakout'});
+  if(C.bucket==='breakdown'){
+    if(C.floor) candle.createPriceLine({price:C.floor,color:'#a8322d',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'base low'});
+    markers.push({time:TS[C.breakoutIdx],position:'aboveBar',color:'#a8322d',shape:'arrowDown',text:'breakdown'});
+  } else markers.push({time:TS[C.breakoutIdx],position:'belowBar',color:'#11161c',shape:'arrowUp',text:'breakout'});
   render();
   if(!MODE.practice && !MODE.replay){ recordStreak(lastResult.good, lastResult.ret); paintAccount(); homeTip(); }
   gcEvent('finished/'+(MODE.practice?'practice':MODE.replay?'replay':'daily')+'/'+(function(){try{return localStorage.getItem('breakout_src')||'direct'}catch(_){return 'direct'}})());
