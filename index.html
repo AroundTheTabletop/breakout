@@ -280,6 +280,13 @@
   .hometip .htrow{display:flex;gap:8px;margin-top:10px}
   .hometip .htrow .share{margin-top:0;flex:1;padding:10px 6px}
   .hometip .ios{display:inline-block;border:1px solid var(--ink);padding:0 5px;font-size:11px}
+  a.practiceTop{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:5px 10px;
+    text-decoration:none;border:1.5px solid var(--accent);background:var(--accent);color:#11161c;font-weight:700}
+  a.practiceTop:hover{background:var(--accent);color:var(--paper)}
+  .bigpractice{display:block;margin-top:14px;padding:16px 12px;background:var(--accent);color:#11161c;text-align:center;
+    text-decoration:none;font-weight:700;font-size:14px;letter-spacing:.12em;text-transform:uppercase;border:1.5px solid #11161c}
+  .bigpractice small{display:block;margin-top:4px;font-weight:400;font-size:10px;letter-spacing:.06em;text-transform:none}
+  .bigpractice:hover{background:#11161c;color:var(--paper)}
 </style>
 </head>
 <body>
@@ -298,6 +305,7 @@
     <span id="puzzleid">Chart No. —</span>
     <span class="right">
       <span class="streak" id="streakwrap">Streak <b id="streak">0</b> · Played <b id="played">0</b></span>
+      <a class="pro practiceTop" id="practiceTop" href="?practice=all">Practice</a>
       <button class="pro" id="howBtn" title="How to play" aria-label="How to play">?<span class="hl"> How to play</span></button>
       <button class="pro" id="proBtn" title="Moving averages, relative strength, market direction and earnings. Turn off for a bare chart.">Indicators: on</button>
     </span>
@@ -381,8 +389,9 @@
           <div class="about-row"><span class="al">What happened</span><span class="av" id="aOutcome"></span></div>
         </div>
       </details>
+      <a class="bigpractice" id="bigPractice" href="?practice=all">Play a practice chart →<small>Unlimited past charts. Pick breakouts or traps.</small></a>
       <a class="recap" href="https://www.aroundthetabletop.com/breakout" target="_blank">Get the monthly BREAKOUT recap →</a>
-      <div class="next" id="nextLine">Next chart unlocks at midnight · <a href="?practice=all">Practice with past charts</a></div>
+      <div class="next" id="nextLine">Next daily chart unlocks at midnight</div>
     </div>
   </div>
 
@@ -932,12 +941,14 @@ if(MODE.practice){
   document.getElementById('sessionlbl').textContent='Practice';
   document.getElementById('puzzleid').textContent='Practice · '+(KIND_LABEL[PRACTICE]||'Any');
   document.getElementById('streakwrap').style.display='none';
-  document.getElementById('nextLine').innerHTML='<a href="?practice='+encodeURIComponent(PRACTICE)+'">Another practice chart →</a> · <a href="./">Today\'s chart</a>';
+  document.getElementById('nextLine').innerHTML='<a href="./">Back to today\'s chart</a>';
+  const bp=document.getElementById('bigPractice'); bp.href='?practice='+encodeURIComponent(PRACTICE); bp.firstChild.textContent='Another practice chart →';
+  const pt=document.getElementById('practiceTop'); pt.href='./'; pt.textContent='Today';
 } else if(MODE.replay){
   document.getElementById('sessionlbl').textContent='Replay';
   document.getElementById('puzzleid').textContent='Chart No. '+DAY+' · replay';
   document.getElementById('streakwrap').style.display='none';
-  document.getElementById('nextLine').innerHTML='<a href="./">Play today\'s chart →</a> · <a href="?practice=all">Practice</a>';
+  document.getElementById('nextLine').innerHTML='<a href="./">Play today\'s chart →</a>';
 } else {
   document.getElementById('puzzleid').textContent='Chart No. '+DAY;
   paintStreak();
